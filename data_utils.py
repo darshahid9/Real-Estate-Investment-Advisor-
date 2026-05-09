@@ -3,12 +3,39 @@ import numpy as np
 import streamlit as st
 import os
 
-DATA_PATH = "https://drive.google.com/drive/folders/1OWIOuZXm5c-mctsyvhsLhcW4pBmIoJXP"
+# ── Path config ───────────────────────────────────────────────────────────────
+# LOCAL: CSV sits next to this file
+LOCAL_PATH = os.path.join(os.path.dirname(__file__), "india_housing_prices.csv")
 
+# CLOUD: paste your Google Drive file ID below (the part after /d/ in the share URL)
+# Example share link: https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUv/view
+GDRIVE_FILE_ID = "folders/1OWIOuZXm5c-mctsyvhsLhcW4pBmIoJXP"
+GDRIVE_URL = f"https://drive.google.com/uc?export=download&id={GDRIVE_FILE_ID}"
+
+
+def _load_raw() -> pd.DataFrame:
+    """Load CSV — tries local file first, falls back to Google Drive URL."""
+    if os.path.exists(LOCAL_PATH):
+        return pd.read_csv(LOCAL_PATH)
+    if GDRIVE_FILE_ID != "YOUR_GOOGLE_DRIVE_FILE_ID_HERE":
+        try:
+            return pd.read_csv(GDRIVE_URL)
+        except Exception as e:
+            raise FileNotFoundError(
+                f"Could not load from Google Drive: {e}\n"
+                "Please set GDRIVE_FILE_ID in data_utils.py."
+            )
+    raise FileNotFoundError(
+        "india_housing_prices.csv not found locally and no Google Drive ID set.\n"
+        "Either add the CSV to your repo or set GDRIVE_FILE_ID in data_utils.py."
+    )
+
+
+@st.cache_data(show_spinner=False)
 def load_and_process():
-    df = pd.read_csv(DATA_PATH)
+    df = _load_raw()
 
-    # Recalculate Price_per_SqFt in actual ₹ (original col is lakh/sqft scale)
+    # Recalculate Price_per_SqFt in actual Rs (original col is lakh/sqft scale)
     df["Price_per_SqFt"] = (df["Price_in_Lakhs"] * 100_000) / df["Size_in_SqFt"]
 
     # Parse amenities into binary columns
@@ -19,20 +46,20 @@ def load_and_process():
 
     # Scores
     transport_map = {"Low": 1, "Medium": 5, "High": 10}
-    df["Transport_Score"] = df["Public_Transport_Accessibility"].map(transport_map).fillna(5)
-    df["School_Score"] = (df["Nearby_Schools"] / df["Nearby_Schools"].max() * 10).round(2)
-    df["Hospital_Score"] = (df["Nearby_Hospitals"] / df["Nearby_Hospitals"].max() * 10).round(2)
-    df["Parking_Score"] = df["Parking_Space"].map({"Yes": 10, "No": 0}).fillna(0)
-    df["Security_Score"] = df["Security"].map({"Yes": 10, "No": 0}).fillna(0)
-    df["Amenity_Score"] = (df["Amenity_Count"] / 5 * 10).round(2)
+    df["Transport_Score"]  = df["Public_Transport_Accessibility"].map(transport_map).fillna(5)
+    df["School_Score"]     = (df["Nearby_Schools"]  / df["Nearby_Schools"].max()  * 10).round(2)
+    df["Hospital_Score"]   = (df["Nearby_Hospitals"] / df["Nearby_Hospitals"].max() * 10).round(2)
+    df["Parking_Score"]    = df["Parking_Space"].map({"Yes": 10, "No": 0}).fillna(0)
+    df["Security_Score"]   = df["Security"].map({"Yes": 10, "No": 0}).fillna(0)
+    df["Amenity_Score"]    = (df["Amenity_Count"] / 5 * 10).round(2)
 
     df["Infrastructure_Score"] = (
-        df["Transport_Score"] * 0.25
-        + df["School_Score"] * 0.20
-        + df["Hospital_Score"] * 0.20
-        + df["Amenity_Score"] * 0.15
-        + df["Security_Score"] * 0.10
-        + df["Parking_Score"] * 0.10
+        df["Transport_Score"]  * 0.25 +
+        df["School_Score"]     * 0.20 +
+        df["Hospital_Score"]   * 0.20 +
+        df["Amenity_Score"]    * 0.15 +
+        df["Security_Score"]   * 0.10 +
+        df["Parking_Score"]    * 0.10
     ).round(2)
 
     df["Furnished_Score"] = df["Furnished_Status"].map(
@@ -40,32 +67,28 @@ def load_and_process():
     ).fillna(5)
 
     # City-level value index
-    city_median = df.groupby("City")["Price_per_SqFt"].transform("median")
-    df["Value_Index"] = (city_median / df["Price_per_SqFt"]).round(3)
+    city_median        = df.groupby("City")["Price_per_SqFt"].transform("median")
+    df["Value_Index"]  = (city_median / df["Price_per_SqFt"]).round(3)
 
     # Growth rate by city
     city_growth = {
-        "Mumbai": 0.090, "New Delhi": 0.085, "Noida": 0.085,
-        "Gurgaon": 0.085, "Bangalore": 0.100, "Hyderabad": 0.100,
-        "Pune": 0.090, "Chennai": 0.080, "Ahmedabad": 0.075,
-        "Kolkata": 0.070, "Surat": 0.075, "Jaipur": 0.080,
-        "Lucknow": 0.075, "Kochi": 0.080, "Indore": 0.075,
-        "Bhubaneswar": 0.080, "Vishakhapatnam": 0.080, "Dehradun": 0.080,
-        "Haridwar": 0.075, "Guwahati": 0.075, "Trivandrum": 0.075,
-        "Mysore": 0.075, "Coimbatore": 0.075, "Vijayawada": 0.075,
-        "Mangalore": 0.070, "Faridabad": 0.075, "Dwarka": 0.080,
-        "Amritsar": 0.070, "Ludhiana": 0.070, "Jodhpur": 0.070,
-        "Nagpur": 0.075, "Bhopal": 0.075, "Patna": 0.070,
-        "Ranchi": 0.070, "Jamshedpur": 0.065, "Raipur": 0.070,
-        "Warangal": 0.070, "Bilaspur": 0.065, "Silchar": 0.065,
-        "Durgapur": 0.065, "Cuttack": 0.065, "Gaya": 0.065,
+        "Mumbai": 0.090, "New Delhi": 0.085, "Noida": 0.085, "Gurgaon": 0.085,
+        "Bangalore": 0.100, "Hyderabad": 0.100, "Pune": 0.090, "Chennai": 0.080,
+        "Ahmedabad": 0.075, "Kolkata": 0.070, "Surat": 0.075, "Jaipur": 0.080,
+        "Lucknow": 0.075, "Kochi": 0.080, "Indore": 0.075, "Bhubaneswar": 0.080,
+        "Vishakhapatnam": 0.080, "Dehradun": 0.080, "Haridwar": 0.075,
+        "Guwahati": 0.075, "Trivandrum": 0.075, "Mysore": 0.075,
+        "Coimbatore": 0.075, "Vijayawada": 0.075, "Mangalore": 0.070,
+        "Faridabad": 0.075, "Amritsar": 0.070, "Ludhiana": 0.070,
+        "Jodhpur": 0.070, "Nagpur": 0.075, "Bhopal": 0.075, "Patna": 0.070,
+        "Ranchi": 0.070, "Raipur": 0.070, "Warangal": 0.070, "Nashik": 0.075,
     }
     df["Growth_Rate"] = df["City"].map(city_growth).fillna(0.075)
 
     # Future price (5 years)
-    df["Future_Price_5Yr"] = (df["Price_in_Lakhs"] * (1 + df["Growth_Rate"]) ** 5).round(2)
+    df["Future_Price_5Yr"]   = (df["Price_in_Lakhs"] * (1 + df["Growth_Rate"]) ** 5).round(2)
     df["Appreciation_Lakhs"] = (df["Future_Price_5Yr"] - df["Price_in_Lakhs"]).round(2)
-    df["Appreciation_Pct"] = ((df["Appreciation_Lakhs"] / df["Price_in_Lakhs"]) * 100).round(2)
+    df["Appreciation_Pct"]   = ((df["Appreciation_Lakhs"] / df["Price_in_Lakhs"]) * 100).round(2)
 
     # Good Investment label (rule-based)
     score = (
@@ -79,6 +102,6 @@ def load_and_process():
         + (df["Parking_Space"] == "Yes").astype(int)
     )
     df["Investment_Score"] = score
-    df["Good_Investment"] = (score >= 5).astype(int)
+    df["Good_Investment"]  = (score >= 5).astype(int)
 
     return df
