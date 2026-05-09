@@ -9,7 +9,7 @@ LOCAL_PATH = os.path.join(os.path.dirname(__file__), "india_housing_prices.csv")
 
 # CLOUD: paste your Google Drive file ID below (the part after /d/ in the share URL)
 # Example share link: https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUv/view
-GDRIVE_FILE_ID = "1OWIOuZXm5c-mctsyvhsLhcW4pBmIoJXP"
+GDRIVE_FILE_ID = "1dqNrW0zCrrrL--f90-ueonJ6Lkz6pvlS/view?usp=sharing"
 GDRIVE_URL = f"https://drive.google.com/uc?export=download&id={GDRIVE_FILE_ID}"
 
 
@@ -17,7 +17,7 @@ def _load_raw() -> pd.DataFrame:
     """Load CSV — tries local file first, falls back to Google Drive URL."""
     if os.path.exists(LOCAL_PATH):
         return pd.read_csv(LOCAL_PATH)
-    if GDRIVE_FILE_ID != "1OWIOuZXm5c-mctsyvhsLhcW4pBmIoJXP":
+    if GDRIVE_FILE_ID != "1dqNrW0zCrrrL--f90-ueonJ6Lkz6pvlS/view?usp=sharing":
         try:
             return pd.read_csv(GDRIVE_URL)
         except Exception as e:
