@@ -9,7 +9,7 @@ LOCAL_PATH = os.path.join(os.path.dirname(__file__), "india_housing_prices.csv")
 
 # CLOUD: paste your Google Drive file ID below (the part after /d/ in the share URL)
 # Example share link: https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUv/view
-GDRIVE_FILE_ID = "folders/1OWIOuZXm5c-mctsyvhsLhcW4pBmIoJXP"
+GDRIVE_FILE_ID = "1OWIOuZXm5c-mctsyvhsLhcW4pBmIoJXP"
 GDRIVE_URL = f"https://drive.google.com/uc?export=download&id={GDRIVE_FILE_ID}"
 
 
