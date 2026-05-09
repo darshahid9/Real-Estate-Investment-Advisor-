@@ -3,10 +3,8 @@ import numpy as np
 import streamlit as st
 import os
 
-DATA_PATH = os.path.join(os.path.dirname(__file__), "https://drive.google.com/drive/folders/1OWIOuZXm5c-mctsyvhsLhcW4pBmIoJXP")
+DATA_PATH = "https://drive.google.com/drive/folders/1OWIOuZXm5c-mctsyvhsLhcW4pBmIoJXP"
 
-
-@st.cache_data(show_spinner=False)
 def load_and_process():
     df = pd.read_csv(DATA_PATH)
 
