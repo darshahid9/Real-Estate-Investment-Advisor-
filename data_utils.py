@@ -17,7 +17,7 @@ def _load_raw() -> pd.DataFrame:
     """Load CSV — tries local file first, falls back to Google Drive URL."""
     if os.path.exists(LOCAL_PATH):
         return pd.read_csv(LOCAL_PATH)
-    if GDRIVE_FILE_ID != "YOUR_GOOGLE_DRIVE_FILE_ID_HERE":
+    if GDRIVE_FILE_ID != "1OWIOuZXm5c-mctsyvhsLhcW4pBmIoJXP":
         try:
             return pd.read_csv(GDRIVE_URL)
         except Exception as e:
